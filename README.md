@@ -9,8 +9,7 @@ iCloud Prime 是一个本地运行的 iCloud Hide My Email 隐私邮箱管理工
 1. 本仓库不会包含任何真实账号信息。
 2. Windows 10 便携版 Release 包不会包含真实 `accounts.json`。
 3. 你的账号 Cookie、App 专用密码、代理地址等只应该保存在本机 `data/accounts.json` 中。
-4. 不要把 `data/accounts.json`、`.env`、`logs/`、`build/` 或任何 `.exe` 文件提交到 GitHub。
-5. Cookie 和 App 专用密码等同于账号访问凭据，请只在自己的电脑上使用。
+4. Cookie 和 App 专用密码等同于账号访问凭据，请只在自己的电脑上使用。
 
 ## 功能
 
