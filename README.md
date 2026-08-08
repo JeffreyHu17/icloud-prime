@@ -333,44 +333,6 @@ data/accounts.json
 
 Release 包里只会包含 `accounts.example.json` 示例文件，不会包含上面的真实配置文件。
 
-## Windows 10 便携包制作
-
-维护者可以使用脚本重新生成便携包：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\package-windows10.ps1 `
-  -Version 0.1.0 `
-  -BinaryPath .\icloud-prime.exe
-```
-
-输出文件：
-
-```text
-build/release/icloud-prime-windows10-portable-v0.1.0.zip
-```
-
-## 发布 Release
-
-首次发布建议使用 `v0.1.0`：
-
-```bash
-git tag v0.1.0
-git push origin main
-git push origin v0.1.0
-```
-
-然后在 GitHub Releases 中上传：
-
-```text
-build/release/icloud-prime-windows10-portable-v0.1.0.zip
-```
-
-Release 说明中应明确写明：
-
-- 这是 Windows 10 便携版
-- 包内不含任何真实账号信息
-- 首次运行会自动创建 `data/` 目录
-- 用户需要自行配置 Cookie 或 App 专用密码
 
 ## 常见问题
 
@@ -408,9 +370,6 @@ imap.mail.me.com:993
 
 如果没有配置 App 专用密码，程序会尝试使用 Cookie 作为 Web API 回退路径。
 
-### 4. 可以公开这个仓库吗？
-
-可以。已经通过 `.gitignore` 排除了本地账号数据、日志、构建产物和可执行文件。但你仍然要确认不要手动上传 `data/accounts.json` 或包含真实 Cookie 的截图、压缩包。
 
 ## 许可证
 
