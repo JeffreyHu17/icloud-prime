@@ -1,577 +1,417 @@
-# iCloud Hide My Email 本地管理工具
+# iCloud Prime
 
-[English](#english) | 中文
+iCloud Prime 是一个本地运行的 iCloud Hide My Email 隐私邮箱管理工具。它提供网页管理台和 HTTP API，可用于管理多个 iCloud 账号、创建隐藏邮箱别名、查看别名列表，并读取发往隐藏邮箱别名的邮件。
 
-通过逆向 iCloud Web 接口和 IMAP 邮件协议，实现 Apple iCloud 隐藏邮箱别名的创建、列出和邮件收取功能。
+仓库地址：[https://github.com/forever94yu/icloud-prime](https://github.com/forever94yu/icloud-prime)
 
-## 功能特性
+## 重要安全说明
 
-- ✅ **创建 HME 别名** — 自动生成 iCloud 隐藏邮箱地址
-- ✅ **列出所有别名** — 查看账号下的所有 HME 别名
-- ✅ **收取邮件** — 通过 IMAP 或 Web API 读取发到 HME 别名的邮件
-- ✅ **双路径读信** — 邮件读取优先走 IMAP (App Password),无 App Password 时回退 Web API (Cookie)
-- ✅ **多账号管理** — 支持多个 iCloud 账号并行管理
-- ✅ **双认证模式** — Cookie (创建别名 + 读邮件回退) 和 App Password (IMAP 优先)
+1. 本仓库不会包含任何真实账号信息。
+2. Windows 10 便携版 Release 包不会包含真实 `accounts.json`。
+3. 你的账号 Cookie、App 专用密码、代理地址等只应该保存在本机 `data/accounts.json` 中。
+4. 不要把 `data/accounts.json`、`.env`、`logs/`、`build/` 或任何 `.exe` 文件提交到 GitHub。
+5. Cookie 和 App 专用密码等同于账号访问凭据，请只在自己的电脑上使用。
 
-## 快速开始
+## 功能
 
-### 1. 安装
+- 本地网页管理台，默认地址为 `http://127.0.0.1:8081`
+- 多 iCloud 账号管理
+- 创建 iCloud Hide My Email 隐藏邮箱别名
+- 查看账号下的隐藏邮箱别名
+- 停用、重新启用、删除隐藏邮箱别名
+- 读取邮件：优先使用 IMAP App 专用密码，失败后可回退到 iCloud Web Cookie
+- 支持 `icloud.com` 和 `icloud.com.cn`
+- 支持 HTTP/SOCKS5 代理配置
 
-#### 方式一：下载二进制发布版（推荐）
+## 方式一：Windows 10 便携版
 
-从 [GitHub Releases](https://github.com/YOUR_GITHUB_USERNAME/icloud-hme/releases) 下载对应平台的二进制文件：
+这是最简单的使用方式，不需要安装 Go 或 Node.js。
 
-| 平台 | 文件 |
-|---|---|
-| Linux x86_64 | `icloud-hme_linux_amd64` |
-| Linux ARM64 | `icloud-hme_linux_arm64` |
-| macOS Intel | `icloud-hme_darwin_amd64` |
-| macOS Apple Silicon | `icloud-hme_darwin_arm64` |
-| Windows x86_64 | `icloud-hme_windows_amd64.exe` |
+### 第 1 步：下载
 
-```bash
-# 示例：Linux 下直接运行
-chmod +x icloud-hme_linux_amd64
-./icloud-hme_linux_amd64
+1. 打开 Releases 页面：
+   [https://github.com/forever94yu/icloud-prime/releases](https://github.com/forever94yu/icloud-prime/releases)
+2. 下载文件：
+   `icloud-prime-windows10-portable-v0.1.0.zip`
+
+### 第 2 步：解压
+
+1. 右键 zip 文件。
+2. 选择“全部解压缩”。
+3. 建议解压到一个固定目录，例如：
+   `D:\Tools\icloud-prime`
+
+解压后目录大致如下：
+
+```text
+icloud-prime-windows10-portable-v0.1.0/
+├── icloud-prime.exe
+├── start.bat
+├── stop.bat
+├── README-Usage.txt
+├── data/
+│   └── accounts.example.json
+└── logs/
 ```
 
-#### 方式二：Docker
+### 第 3 步：启动
 
-```bash
-# 拉取镜像
-docker pull ghcr.io/YOUR_GITHUB_USERNAME/icloud-hme:latest
+1. 双击 `start.bat`。
+2. 等待几秒钟。
+3. 打开浏览器访问：
+   [http://127.0.0.1:8081](http://127.0.0.1:8081)
 
-# 运行（将本机 data 目录挂载进去）
-docker run -d \
-  --name icloud-hme \
-  -p 8081:8081 \
-  -v /path/to/data:/app/data \
-  ghcr.io/YOUR_GITHUB_USERNAME/icloud-hme:latest
+如果你想手动启动，也可以在该目录打开命令行运行：
+
+```powershell
+.\icloud-prime.exe -addr :8081 -data .\data
 ```
 
-镜像支持 `linux/amd64` 和 `linux/arm64` 双架构，自动适配。
+### 第 4 步：添加账号
 
-#### 方式三：源码编译
+打开网页管理台后：
 
-```bash
-# 前置要求: Go 1.26+
-git clone https://github.com/YOUR_GITHUB_USERNAME/icloud-hme.git
-cd icloud-hme
+1. 找到账号管理区域。
+2. 添加一个账号名称，例如 `主账号`。
+3. `host` 一般填写 `icloud.com`。
+4. 如果你使用国区 iCloud，可以填写 `icloud.com.cn`。
+5. 如果暂时没有 Cookie，可以先添加账号，后续再登录或更新 Cookie。
 
-# 编译
-go build -o icloud-hme.exe .
+账号数据会保存到便携目录里的：
 
-# 调试模式（启用 Gin 请求日志）
-./icloud-hme.exe -debug
+```text
+data/accounts.json
 ```
 
-### 2. 配置账号
+这个文件由程序自动生成，里面可能包含真实 Cookie 和 App 专用密码，请不要上传或分享。
 
-在程序 `data/` 目录下创建 `accounts.json`:
+### 第 5 步：配置 Cookie
+
+Cookie 用于创建、管理隐藏邮箱别名，也可作为读取邮件的 Web API 回退方式。
+
+获取 Cookie 的常见方式：
+
+1. 在浏览器打开 [https://www.icloud.com](https://www.icloud.com) 或 [https://www.icloud.com.cn](https://www.icloud.com.cn)。
+2. 登录你的 iCloud 账号。
+3. 打开浏览器开发者工具。
+4. 进入 Application 或 Storage 面板。
+5. 找到 Cookies。
+6. 复制 iCloud 相关 Cookie。
+7. 在管理台中更新账号 Cookie。
+
+程序支持两种 Cookie 输入格式。
+
+格式一：Header 字符串：
+
+```text
+X-APPLE-WEBAUTH-TOKEN=你的值; X-APPLE-WEBAUTH-USER=你的值; X-APPLE-DS-WEB-SESSION-TOKEN=你的值
+```
+
+格式二：JSON 对象：
 
 ```json
 {
-  "accounts": [
-    {
-      "id": "acc_1",
-      "name": "主号",
-      "host": "icloud.com",
-      "cookies": {
-        "X-APPLE-WEBAUTH-TOKEN": "token_value",
-        "X-APPLE-WEBAUTH-USER": "v=1:s=1:d=22789132008",
-        "X-APPLE-WEBAUTH-HSA-TRUST": "trust_value",
-        "X-APPLE-DS-WEB-SESSION-TOKEN": "session_token"
-      },
-      "app_password": "xxxx-xxxx-xxxx-xxxx",
-      "proxy": "http://user:pass@host:port"
-    }
-  ]
+  "X-APPLE-WEBAUTH-TOKEN": "你的值",
+  "X-APPLE-WEBAUTH-USER": "你的值",
+  "X-APPLE-DS-WEB-SESSION-TOKEN": "你的值"
 }
 ```
 
-> **提示:** 也可以通过 API 动态添加账号，无需手动编辑 JSON 文件。`cookies` 和 `app_password` 都是可选的，`proxy` 也是可选的。
+Cookie 会过期。如果创建别名或读取邮件返回 401/403，请重新获取 Cookie。
 
-### 3. 启动服务
+### 第 6 步：配置 App 专用密码
 
-```bash
-# 二进制方式（默认 data 目录）
-./icloud-hme_linux_amd64
+App 专用密码用于 IMAP 读信。它不是你的 Apple ID 登录密码。
 
-# 指定端口和数据目录
-./icloud-hme_linux_amd64 -addr :9090 -data ./my_data
+生成步骤：
 
-# 调试模式（启用请求日志）
-./icloud-hme_linux_amd64 -debug
+1. 打开 [https://appleid.apple.com](https://appleid.apple.com)。
+2. 登录 Apple ID。
+3. 进入“登录与安全”。
+4. 找到“App 专用密码”。
+5. 创建一个新的 App 专用密码。
+6. 在管理台中填写 iCloud 邮箱地址和 App 专用密码。
 
-# 查看完整参数
-./icloud-hme_linux_amd64 -h
-```
+示例字段：
 
-服务默认监听 `:8081`。
-
-## API 接口
-
-### 核心接口
-
-#### 创建 HME 别名
-
-```bash
-POST /api/create
-
-# 请求体
-{
-  "account_id": "acc_1",      # 必填: 账号 ID
-  "label": "注册某网站"        # 可选: 别名标签
-}
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "email": "xyz123@icloud.com",
-    "label": "注册某网站",
-    "created_at": "2024-01-15T10:30:00Z",
-    "account_id": "acc_1"
-  }
-}
-```
-
-#### 读取邮件
-
-```bash
-GET /api/inbox?account_id=acc_1&alias=xyz123@icloud.com&limit=20&days=7
-
-# 参数说明:
-#   account_id - 必填: 账号 ID
-#   alias      - 可选: 只读取发到该别名的邮件
-#   limit      - 可选: 返回邮件数量 (默认 20)
-#   days       - 可选: 查找最近几天的邮件 (默认 7,仅 IMAP 模式)
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "account_id": "acc_1",
-    "alias": "xyz123@icloud.com",
-    "count": 2,
-    "method": "imap",
-    "messages": [
-      {
-        "id": "1042",
-        "from": "noreply@example.com",
-        "to": "xyz123@icloud.com",
-        "subject": "欢迎注册",
-        "preview": "感谢您的注册...",
-        "date": "2026-07-09T14:32:10+08:00"
-      }
-    ]
-  }
-}
-
-# 读取方式 (自动选择):
-#   method: "imap"    — 通过 App Password 认证 (优先)
-#   method: "web_api" — 通过 Cookie 认证,无需 App Password (回退)
-```
-
-### 账号管理接口
-
-#### 列出所有账号
-
-```bash
-GET /api/accounts
-
-# 响应
-{
-  "success": true,
-  "data": [
-    {"id": "acc_1", "name": "主号"},
-    {"id": "acc_2", "name": "副号"}
-  ]
-}
-```
-
-#### 添加账号
-
-**简化版（cookies 可选）:**
-
-```bash
-POST /api/accounts
-
-# 请求体
-{
-  "name": "新账号",
-  "host": "icloud.com",           # 可选
-  "proxy": "http://..."           # 可选
-}
-
-# 响应 - 状态为 pending,需登录
-{
-  "success": true,
-  "data": {
-    "id": "acc_xxx",
-    "name": "新账号",
-    "status": "pending"
-  }
-}
-```
-
-**完整版（带 Cookie）:**
-
-```bash
-POST /api/accounts
-
-# 请求体
-{
-  "name": "新账号",
-  "cookies": "{\"x-apple-session-token\":\"token_value\"}",  # JSON 或 Header 格式
-  "host": "icloud.com",           # 可选
-  "proxy": "http://..."           # 可选
-}
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "id": "acc_3",
-    "name": "新账号",
-    "status": "active"
-  }
-}
-```
-
-#### 账号登录（获取 Cookie）
-
-```bash
-POST /api/accounts/:id/login
-
-# 请求体
-{
-  "password": "用户的常规iCloud密码",  # 不是 App Password
-  "otp_code": "123456"                  # 可选,2FA 验证码
-}
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "id": "acc_1",
-    "cookies": {
-      "x-apple-session-token": "...",
-      "X-APPLE-WEBAUTH-TOKEN": "..."
-    }
-  }
-}
-```
-
-#### 删除账号
-
-```bash
-DELETE /api/accounts/:id
-
-# 响应
-{
-  "success": true,
-  "data": {"id": "acc_3"}
-}
-```
-
-#### 设置 App Password
-
-```bash
-POST /api/accounts/:id/password
-
-# 请求体
+```json
 {
   "icloud_email": "your_email@icloud.com",
   "app_password": "xxxx-xxxx-xxxx-xxxx"
 }
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "id": "acc_1",
-    "icloud_email": "your_email@icloud.com"
-  }
-}
 ```
 
-### 别名管理接口
+### 第 7 步：创建隐藏邮箱别名
 
-#### 列出所有别名
+1. 在网页管理台选择账号。
+2. 输入一个标签，例如 `注册某网站`。
+3. 点击创建。
+4. 成功后会得到一个隐藏邮箱地址，例如 `example@icloud.com`。
+
+也可以使用 API：
 
 ```bash
-GET /api/aliases?account_id=acc_1
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "account_id": "acc_1",
-    "count": 15,
-    "aliases": [
-      {
-        "email": "xyz123@icloud.com",
-        "label": "注册某网站",
-        "created_at": "2024-01-15T10:30:00Z"
-      }
-    ]
-  }
-}
+curl -X POST http://127.0.0.1:8081/api/create \
+  -H "Content-Type: application/json" \
+  -d "{\"account_id\":\"acc_1\",\"label\":\"注册某网站\"}"
 ```
 
-#### 停用别名
+### 第 8 步：读取邮件
+
+在网页管理台选择账号和别名后读取邮件。
+
+也可以使用 API：
 
 ```bash
-POST /api/aliases/:id/deactivate
-
-# 请求体
-{
-  "account_id": "acc_1"
-}
-
-# 响应
-{
-  "success": true,
-  "data": {
-    "anonymous_id": "abc123",
-    "success": true
-  }
-}
+curl "http://127.0.0.1:8081/api/inbox?account_id=acc_1&alias=your_alias@icloud.com&limit=20&days=7"
 ```
 
-#### 激活别名
+读取优先级：
 
-```bash
-POST /api/aliases/:id/reactivate
+1. 已配置 App 专用密码时，优先使用 IMAP。
+2. IMAP 不可用时，尝试使用 Cookie 走 Web API。
 
-# 请求体
-{
-  "account_id": "acc_1"
-}
+### 第 9 步：停止
 
-# 响应
-{
-  "success": true,
-  "data": {
-    "anonymous_id": "abc123",
-    "success": true
-  }
-}
+双击：
+
+```text
+stop.bat
 ```
 
-#### 删除别名
+或者在命令行中结束进程：
+
+```powershell
+taskkill /F /IM icloud-prime.exe
+```
+
+## 方式二：从源码运行
+
+### 第 1 步：安装依赖
+
+需要安装：
+
+- Git
+- Go 1.23 或更高版本
+- Node.js 20 或更高版本，仅在需要重新构建前端时使用
+
+### 第 2 步：克隆仓库
 
 ```bash
+git clone https://github.com/forever94yu/icloud-prime.git
+cd icloud-prime
+```
+
+### 第 3 步：下载 Go 依赖
+
+```bash
+go mod download
+```
+
+### 第 4 步：可选，重新构建前端
+
+仓库已包含已构建的前端静态文件。如果你修改了 `web/` 目录，需要重新构建：
+
+```bash
+cd web
+npm install
+npm run build
+cd ..
+```
+
+`web/vite.config.ts` 会把构建结果输出到：
+
+```text
+internal/server/static/dist
+```
+
+Go 程序会把这个目录嵌入到最终可执行文件里。
+
+### 第 5 步：构建 Windows 可执行文件
+
+```bash
+go build -ldflags="-s -w" -o icloud-prime.exe .
+```
+
+### 第 6 步：启动
+
+```bash
+.\icloud-prime.exe -addr :8081 -data .\data
+```
+
+打开：
+
+[http://127.0.0.1:8081](http://127.0.0.1:8081)
+
+## 常用启动参数
+
+```bash
+.\icloud-prime.exe
+```
+
+默认监听 `:8081`，默认数据目录为 `.\data`。
+
+```bash
+.\icloud-prime.exe -addr :9000
+```
+
+指定端口为 `9000`。
+
+```bash
+.\icloud-prime.exe -data D:\icloud-prime-data
+```
+
+指定账号数据目录。
+
+```bash
+.\icloud-prime.exe -debug
+```
+
+启用调试日志。
+
+## API 简表
+
+### 账号管理
+
+```text
+GET    /api/accounts
+POST   /api/accounts
+DELETE /api/accounts/:id
+POST   /api/accounts/:id/password
+PUT    /api/accounts/:id/cookies
+POST   /api/accounts/:id/login
+```
+
+### 隐藏邮箱别名
+
+```text
+POST   /api/create
+GET    /api/aliases?account_id=acc_1
+POST   /api/aliases/:id/deactivate
+POST   /api/aliases/:id/reactivate
 DELETE /api/aliases/:id
+```
 
-# 请求体
-{
-  "account_id": "acc_1"
-}
+### 邮件
 
-# 响应
+```text
+GET /api/inbox?account_id=acc_1&alias=alias@icloud.com&limit=20&days=7
+GET /api/mailboxes?account_id=acc_1
+```
+
+更完整的接口说明见 [API.md](API.md)。
+
+## 数据文件格式示例
+
+程序实际使用的是：
+
+```text
+data/accounts.json
+```
+
+示例：
+
+```json
 {
-  "success": true,
-  "data": {
-    "anonymous_id": "abc123"
+  "accounts": {
+    "acc_1": {
+      "id": "acc_1",
+      "name": "主账号",
+      "host": "icloud.com",
+      "cookies": {
+        "X-APPLE-WEBAUTH-TOKEN": "你的 Cookie 值",
+        "X-APPLE-WEBAUTH-USER": "你的 Cookie 值",
+        "X-APPLE-DS-WEB-SESSION-TOKEN": "你的 Cookie 值"
+      },
+      "icloud_email": "your_email@icloud.com",
+      "app_password": "xxxx-xxxx-xxxx-xxxx",
+      "status": "active"
+    }
   }
 }
 ```
 
-## 认证方式
+Release 包里只会包含 `accounts.example.json` 示例文件，不会包含上面的真实配置文件。
 
-### 方式一: Cookie 认证 (推荐,功能最完整)
+## Windows 10 便携包制作
 
-Cookie 认证可实现所有功能:创建别名、读取邮件、管理别名。
+维护者可以使用脚本重新生成便携包：
 
-**适用范围:**
-- 创建/停用/激活/删除 HME 别名 ✅
-- 读取邮件 (通过 iCloud Web API,无需 App Password) ✅
-
-**获取 Cookie:**
-
-1. 使用浏览器登录 [icloud.com](https://www.icloud.com) 或 [icloud.com.cn](https://www.icloud.com.cn) (国区)
-2. 打开浏览器开发者工具 (F12)
-3. 进入 Application → Cookies
-4. 导出全部 Cookie 为 `{"key":"value"}` 格式的 JSON
-
-**关键 Cookie (必需):**
-- `X-APPLE-WEBAUTH-TOKEN` — 认证 token
-- `X-APPLE-WEBAUTH-USER` — 含 dsid (`v=1:s=1:d=22789132008`)
-- `X-APPLE-WEBAUTH-HSA-TRUST` — 设备信任 token
-- `X-APPLE-DS-WEB-SESSION-TOKEN` — 会话 token
-
-**注意:** 导出的 Cookie 值不要包含多余的引号或转义字符。
-
-### 方式二: App Password 认证 (IMAP,优先读邮件)
-
-App Password 用于 IMAP 读取邮件,是邮件读取的优先路径 (支持服务端按收件人搜索)。
-
-**生成 App Password:**
-
-1. 登录 [appleid.apple.com](https://appleid.apple.com)
-2. 进入 "登录和安全" → "App 专用密码"
-3. 生成新密码,用于此工具
-
-### 邮件读取双路径
-
-`GET /api/inbox` 自动选择读取方式:
-
-1. **优先: IMAP (App Password)** — 设置了 App Password 时使用,支持服务端按收件人 (`TO`) 搜索
-2. **回退: Web API (Cookie)** — 无 App Password 或 IMAP 失败时,通过 `mccgateway` 端点读取,本地按别名过滤
-
-响应中包含 `"method": "web_api"` 或 `"method": "imap"` 字段,标识实际使用的读取方式。
-
-## 项目架构
-
-```
-icloud-hme/
-├── main.go                 # 入口: 加载配置、初始化管理器、启动服务
-├── accounts.json           # 账号配置文件 (自动生成)
-├── go.mod
-└── internal/
-    ├── account/
-    │   └── manager.go      # 多账号管理器 (持久化、客户端工厂)
-    ├── hme/
-    │   ├── client.go       # iCloud HME Web 客户端 (Cookie 认证)
-    │   └── auth.go         # SRP 登录 (账号密码 + 2FA 获取 Cookie)
-    ├── mail/
-    │   ├── client.go       # IMAP 邮件客户端 (App Password 认证)
-    │   └── web_client.go   # Web 邮件客户端 (Cookie 认证,无需 App Password)
-    └── server/
-        └── server.go       # HTTP API (Gin 路由 + 请求处理)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-windows10.ps1 `
+  -Version 0.1.0 `
+  -BinaryPath .\icloud-prime.exe
 ```
 
-### 核心模块
+输出文件：
 
-- **account.Manager**: 管理多个 iCloud 账号,负责配置持久化和客户端创建
-- **hme.Client**: 封装 iCloud HME Web API,支持 Cookie 认证
-- **hme.auth**: SRP 协议登录,支持账号密码 + 可选 2FA
-- **mail.Client**: IMAP 邮件客户端 (App Password,优先读邮件)
-- **mail.WebClient**: 通过 iCloud Web API (mccgateway) 读取邮件,无需 App Password
-- **server.Server**: HTTP API 服务,提供 RESTful 接口
+```text
+build/release/icloud-prime-windows10-portable-v0.1.0.zip
+```
 
-## 技术栈
+## 发布 Release
 
-- **Go 1.26+**
-- **Gin** — HTTP 框架
-- **go-imap** — IMAP 协议实现
-- **tls-client** — TLS 指纹模拟 (绕过 iCloud 反爬)
+首次发布建议使用 `v0.1.0`：
+
+```bash
+git tag v0.1.0
+git push origin main
+git push origin v0.1.0
+```
+
+然后在 GitHub Releases 中上传：
+
+```text
+build/release/icloud-prime-windows10-portable-v0.1.0.zip
+```
+
+Release 说明中应明确写明：
+
+- 这是 Windows 10 便携版
+- 包内不含任何真实账号信息
+- 首次运行会自动创建 `data/` 目录
+- 用户需要自行配置 Cookie 或 App 专用密码
 
 ## 常见问题
 
-### Q: 创建别名返回 401/403 错误?
+### 1. 打不开网页怎么办？
 
-**A:** Cookie 已过期，需要重新获取。iCloud Cookie 有效期通常为 24 小时。
+先确认程序是否正在运行，然后访问：
 
-### Q: 读取邮件返回超时?
-
-**A:** 检查网络连接，确保可以访问 `imap.mail.me.com:993`。
-
-### Q: 如何查看某个别名收到了哪些邮件?
-
-**A:** 调用 `GET /api/inbox?account_id=acc_1&alias=your_alias@icloud.com`
-
-### Q: 支持同时管理多个 iCloud 账号吗?
-
-**A:** 支持，在 `accounts.json` 中配置多个账号即可，每个账号有独立的 `id`。
-
-## 开发指南
-
-### 本地开发
-
-```bash
-# 安装依赖
-go mod download
-
-# 运行 (开发模式，默认 :8081，带 Gin 请求日志)
-go run main.go -debug
-
-# 编译
-go build -o icloud-hme.exe .
-
-# 交叉编译
-GOOS=linux GOARCH=amd64 go build -o icloud-hme .
-GOOS=windows GOARCH=amd64 go build -o icloud-hme.exe .
+```text
+http://127.0.0.1:8081
 ```
 
-### 发布
+如果端口被占用，可以换端口：
 
-推送 `v*` tag 到 GitHub 自动触发 CI：
-
-```bash
-git tag v0.2.0 && git push origin --tags
+```powershell
+.\icloud-prime.exe -addr :9000 -data .\data
 ```
 
-Actions 会自动构建多平台二进制、Docker 镜像（`ghcr.io/YOUR_GITHUB_USERNAME/icloud-hme`）并创建 Release。
+然后访问：
 
-### 代码规范
+```text
+http://127.0.0.1:9000
+```
 
-- 代码注释使用中文
-- 错误信息返回给用户时使用中文
-- API 响应格式统一: `{success: bool, data: any, message: string}`
+### 2. 创建别名返回 401 或 403 怎么办？
+
+通常是 Cookie 过期。重新登录 iCloud，重新复制 Cookie，然后在管理台更新账号 Cookie。
+
+### 3. 邮件读取失败怎么办？
+
+优先检查 App 专用密码是否正确。IMAP 需要可访问：
+
+```text
+imap.mail.me.com:993
+```
+
+如果没有配置 App 专用密码，程序会尝试使用 Cookie 作为 Web API 回退路径。
+
+### 4. 可以公开这个仓库吗？
+
+可以。已经通过 `.gitignore` 排除了本地账号数据、日志、构建产物和可执行文件。但你仍然要确认不要手动上传 `data/accounts.json` 或包含真实 Cookie 的截图、压缩包。
 
 ## 许可证
 
 MIT License
-
----
-## 社区
-
-友情链接：[LINUX DO](https://linux.do)
-
-## English
-
-A local management tool for Apple iCloud Hide My Email (HME) aliases, supporting creation, listing, and email reading through reverse-engineered iCloud Web API and IMAP protocol.
-
-### Features
-
-- Create HME aliases automatically
-- List all aliases for an account
-- Read emails sent to HME aliases via IMAP
-- Manage multiple iCloud accounts
-- Dual authentication: Cookie and App Password
-
-### Quick Start
-
-#### Option 1: Binary (GitHub Releases)
-
-Download the latest binary from [GitHub Releases](https://github.com/YOUR_GITHUB_USERNAME/icloud-hme/releases):
-
-| Platform | File |
-|---|---|
-| Linux x86_64 | `icloud-hme_linux_amd64` |
-| Linux ARM64 | `icloud-hme_linux_arm64` |
-| macOS Intel | `icloud-hme_darwin_amd64` |
-| macOS Apple Silicon | `icloud-hme_darwin_arm64` |
-| Windows x86_64 | `icloud-hme_windows_amd64.exe` |
-
-```bash
-# Linux example
-chmod +x icloud-hme_linux_amd64
-./icloud-hme_linux_amd64
-```
-
-#### Option 2: Docker
-
-```bash
-docker pull ghcr.io/YOUR_GITHUB_USERNAME/icloud-hme:latest
-
-docker run -d \
-  --name icloud-hme \
-  -p 8081:8081 \
-  -v /path/to/data:/app/data \
-  ghcr.io/YOUR_GITHUB_USERNAME/icloud-hme:latest
-```
-
-#### Option 3: Build from source
-
-```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/icloud-hme.git
-cd icloud-hme
-go build -o icloud-hme .
-./icloud-hme -debug     # enable request logging
-```
-
-Create `data/accounts.json` and start the server (default port `:8081`).
