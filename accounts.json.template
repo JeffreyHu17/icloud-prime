@@ -1,44 +1,18 @@
 {
-  "accounts": [
-    {
+  "accounts": {
+    "acc_1": {
       "id": "acc_1",
-      "name": "主号",
-      "host": "imap.mail.me.com",
+      "name": "Example account",
+      "host": "icloud.com",
+      "cookies": {
+        "X-APPLE-WEBAUTH-TOKEN": "PASTE_YOUR_COOKIE_VALUE_HERE",
+        "X-APPLE-WEBAUTH-USER": "PASTE_YOUR_COOKIE_VALUE_HERE",
+        "X-APPLE-DS-WEB-SESSION-TOKEN": "PASTE_YOUR_COOKIE_VALUE_HERE"
+      },
+      "icloud_email": "your_email@icloud.com",
+      "app_password": "xxxx-xxxx-xxxx-xxxx",
       "proxy": "",
-      "cookies": [
-        {
-          "domain": ".icloud.com",
-          "expirationDate": 1735689600,
-          "hostOnly": false,
-          "httpOnly": true,
-          "name": "x-apple-session-token",
-          "path": "/",
-          "sameSite": "unspecified",
-          "secure": true,
-          "session": false,
-          "storeId": "0",
-          "value": "YOUR_SESSION_TOKEN_HERE"
-        },
-        {
-          "domain": ".icloud.com",
-          "expirationDate": 1735689600,
-          "hostOnly": false,
-          "httpOnly": true,
-          "name": "X-APPLE-WEBAUTH-TOKEN",
-          "path": "/",
-          "sameSite": "unspecified",
-          "secure": true,
-          "session": false,
-          "storeId": "0",
-          "value": "YOUR_WEBAUTH_TOKEN_HERE"
-        }
-      ],
-      "app_passwords": [
-        {
-          "icloud_email": "your_email@icloud.com",
-          "password": "xxxx-xxxx-xxxx-xxxx"
-        }
-      ]
+      "status": "pending"
     }
-  ]
+  }
 }

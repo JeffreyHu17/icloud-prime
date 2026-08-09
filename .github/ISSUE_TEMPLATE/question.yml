@@ -1,0 +1,20 @@
+name: Question
+description: Ask a usage or setup question.
+title: "[Question]: "
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For general discussion, GitHub Discussions is preferred. Do not include secrets.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include OS, version, and sanitized command output when useful.

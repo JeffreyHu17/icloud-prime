@@ -3,14 +3,13 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  # ─────────────────── 二进制发布 ───────────────────
   binaries:
     name: Build binaries
     runs-on: ubuntu-latest
@@ -24,9 +23,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build web UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: "1.26"
           cache: true
 
       - name: Build
@@ -36,18 +47,16 @@ jobs:
         run: |
           ext=""
           [ "${{ matrix.goos }}" = "windows" ] && ext=".exe"
-          output="icloud-hme_${{ matrix.goos }}_${{ matrix.goarch }}${ext}"
+          output="icloud-prime_${{ matrix.goos }}_${{ matrix.goarch }}${ext}"
           CGO_ENABLED=0 go build -ldflags="-s -w" -o "$output" .
-          echo "artifact=$output" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4
         with:
-          name: icloud-hme_${{ matrix.goos }}_${{ matrix.goarch }}
-          path: icloud-hme_${{ matrix.goos }}_${{ matrix.goarch }}*
+          name: icloud-prime_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: icloud-prime_${{ matrix.goos }}_${{ matrix.goarch }}*
 
-  # ─────────────────── Docker 镜像 ───────────────────
   docker:
-    name: Build & push Docker image
+    name: Build and push Docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +72,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker meta
+      - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -73,7 +82,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build & push
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -84,7 +93,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─────────────────── 创建 Release ───────────────────
   release:
     name: Create GitHub Release
     needs: [binaries, docker]
@@ -92,7 +100,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: icloud-hme_*
+          pattern: icloud-prime_*
           merge-multiple: true
 
       - uses: softprops/action-gh-release@v2
@@ -103,8 +111,8 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
-            icloud-hme_linux_amd64
-            icloud-hme_linux_arm64
-            icloud-hme_darwin_amd64
-            icloud-hme_darwin_arm64
-            icloud-hme_windows_amd64.exe
+            icloud-prime_linux_amd64
+            icloud-prime_linux_arm64
+            icloud-prime_darwin_amd64
+            icloud-prime_darwin_arm64
+            icloud-prime_windows_amd64.exe
