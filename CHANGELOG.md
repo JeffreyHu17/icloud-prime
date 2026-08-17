@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.1.5 - 2026-08-17
+
+- Fixed automatic alias creation jobs stopping permanently after transient iCloud errors such as HTTP 421.
+- Automatic jobs now record the transient error, keep running, release the reserved hourly quota, and retry in the next hour.
+- Added scheduler regression coverage for the HTTP 421 backoff path while keeping permanent authentication errors terminal.
+
 ## v0.1.4 - 2026-08-13 23:35 +08:00
 
 - Added full-message detail APIs for single-message and batch body loading.

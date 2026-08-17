@@ -321,6 +321,14 @@ func (s *Scheduler) runJob(ctx context.Context, id string, at time.Time) {
 	result, err := s.creator.CreateAlias(ctx, accountID, labelFor(labelPrefix, nextIndex))
 	if err != nil {
 		s.limiter.Release(accountID, at, 1)
+		if isTransientCreateError(err) {
+			s.updateJob(id, at, func(job *Job) {
+				job.Status = StatusRunning
+				job.LastError = err.Error()
+				job.NextRunAt = timePtr(nextHour(at))
+			})
+			return
+		}
 		s.updateJob(id, at, func(job *Job) {
 			job.Status = StatusError
 			job.LastError = err.Error()
@@ -431,6 +439,34 @@ func (s *Scheduler) isInDailyWindow(at time.Time, start, end string) bool {
 		return current >= startDur && current < endDur
 	}
 	return current >= startDur || current < endDur
+}
+
+func isTransientCreateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	transientMarkers := []string{
+		"http 421",
+		"http 429",
+		"http 500",
+		"http 502",
+		"http 503",
+		"http 504",
+		"too many requests",
+		"timeout",
+		"deadline exceeded",
+		"connection reset",
+		"temporary",
+		"temporarily",
+		"连接失败",
+	}
+	for _, marker := range transientMarkers {
+		if strings.Contains(msg, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func validClock(value string) bool {

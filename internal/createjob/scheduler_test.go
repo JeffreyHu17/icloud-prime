@@ -151,6 +151,35 @@ func TestJobRecordsErrorWithoutConsumingQuota(t *testing.T) {
 	}
 }
 
+func TestJobBacksOffAfterHTTP421WithoutStopping(t *testing.T) {
+	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
+	s := newTestScheduler(t, &fakeCreator{fail: errors.New("HTTP 421: request throttled")}, now)
+
+	job, err := s.UpsertJob(JobRequest{AccountID: "acc_1", Mode: ModeDuration, DurationHours: 1})
+	if err != nil {
+		t.Fatalf("upsert failed: %v", err)
+	}
+	if err := s.RunDue(context.Background()); err != nil {
+		t.Fatalf("run due failed: %v", err)
+	}
+	updated, ok := s.GetJob(job.ID)
+	if !ok {
+		t.Fatal("job missing")
+	}
+	if updated.Status != StatusRunning {
+		t.Fatalf("expected transient 421 to keep job running, got %s", updated.Status)
+	}
+	if updated.LastError == "" {
+		t.Fatal("expected last error to be recorded")
+	}
+	if updated.NextRunAt == nil || !updated.NextRunAt.After(now) {
+		t.Fatalf("expected retry to be scheduled after now, got %v", updated.NextRunAt)
+	}
+	if got := s.RemainingThisHour("acc_1"); got != 5 {
+		t.Fatalf("failed create should not consume quota, got %d", got)
+	}
+}
+
 func TestSchedulerStartRunsDueJobs(t *testing.T) {
 	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
 	creator := &fakeCreator{}

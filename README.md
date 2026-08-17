@@ -98,7 +98,7 @@ Open the Releases page:
 Download:
 
 ```text
-icloud-prime-windows10-portable-v0.1.4.zip
+icloud-prime-windows10-portable-v0.1.5.zip
 ```
 
 ### 2. Extract
@@ -112,7 +112,7 @@ D:\Tools\icloud-prime
 The extracted folder contains:
 
 ```text
-icloud-prime-windows10-portable-v0.1.4/
+icloud-prime-windows10-portable-v0.1.5/
 |-- icloud-prime.exe
 |-- start.bat
 |-- stop.bat
