@@ -98,7 +98,7 @@ Open the Releases page:
 Download:
 
 ```text
-icloud-prime-windows10-portable-v0.1.5.zip
+icloud-prime-windows10-portable-v0.1.6.zip
 ```
 
 ### 2. Extract
@@ -112,7 +112,7 @@ D:\Tools\icloud-prime
 The extracted folder contains:
 
 ```text
-icloud-prime-windows10-portable-v0.1.5/
+icloud-prime-windows10-portable-v0.1.6/
 |-- icloud-prime.exe
 |-- start.bat
 |-- stop.bat
@@ -255,6 +255,9 @@ Automatic jobs are stored locally in:
 ```text
 data/create_jobs.json
 ```
+
+The same file also stores current-hour quota usage, so restarting the program
+does not reset an account's already consumed quota for that hour.
 
 Do not upload or share that file.
 

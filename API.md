@@ -156,6 +156,8 @@ Response:
 
 Single creation, batch creation, and automatic jobs share the same quota:
 up to 5 successful alias creations per account per hour.
+Current-hour quota usage is persisted in `data/create_jobs.json`, so restarting
+the program does not reset quota already consumed during that hour.
 When the quota is exhausted, single creation returns `429 Too Many Requests`.
 
 ### Batch Create Aliases
@@ -284,6 +286,8 @@ Fields:
 Daily windows can cross midnight, for example `22:00` to `02:00`.
 Jobs are stored locally in `data/create_jobs.json` and resume after restart when
 their status is `running`.
+The same file also stores current-hour quota usage shared by single creation,
+batch creation, and automatic jobs.
 
 ### Manage Automatic Create Jobs
 

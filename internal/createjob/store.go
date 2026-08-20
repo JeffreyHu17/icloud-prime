@@ -16,16 +16,30 @@ func NewStore(path string) *Store {
 }
 
 type storeFile struct {
-	Version   int       `json:"version"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Jobs      []*Job    `json:"jobs"`
+	Version   int         `json:"version"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	Jobs      []*Job      `json:"jobs"`
+	Quota     *QuotaState `json:"quota,omitempty"`
+}
+
+type StoreState struct {
+	Jobs  []*Job
+	Quota QuotaState
 }
 
 func (s *Store) Load() ([]*Job, error) {
+	state, err := s.LoadState()
+	if err != nil {
+		return nil, err
+	}
+	return state.Jobs, nil
+}
+
+func (s *Store) LoadState() (*StoreState, error) {
 	raw, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []*Job{}, nil
+			return &StoreState{Jobs: []*Job{}}, nil
 		}
 		return nil, err
 	}
@@ -35,20 +49,36 @@ func (s *Store) Load() ([]*Job, error) {
 		return nil, err
 	}
 	if file.Jobs == nil {
-		return []*Job{}, nil
+		file.Jobs = []*Job{}
 	}
-	return file.Jobs, nil
+	state := &StoreState{Jobs: file.Jobs}
+	if file.Quota != nil {
+		state.Quota = *file.Quota
+	}
+	return state, nil
 }
 
 func (s *Store) Save(jobs []*Job) error {
+	return s.SaveState(StoreState{Jobs: jobs})
+}
+
+func (s *Store) SaveState(state StoreState) error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
 		return err
 	}
-	raw, err := json.MarshalIndent(storeFile{
+	if state.Jobs == nil {
+		state.Jobs = []*Job{}
+	}
+	file := storeFile{
 		Version:   1,
 		UpdatedAt: time.Now(),
-		Jobs:      jobs,
-	}, "", "  ")
+		Jobs:      state.Jobs,
+	}
+	if len(state.Quota.Buckets) > 0 {
+		quota := state.Quota
+		file.Quota = &quota
+	}
+	raw, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
 	}

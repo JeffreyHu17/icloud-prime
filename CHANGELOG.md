@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.1.6 - 2026-08-20
+
+- Persist current-hour per-account quota usage in `data/create_jobs.json`.
+- Prevent restarting the program from resetting the local five-alias hourly quota.
+- Added scheduler regression coverage for quota restoration after restart.
+- Updated README and API documentation to describe persisted quota state.
+
 ## v0.1.5 - 2026-08-17
 
 - Fixed automatic alias creation jobs stopping permanently after transient iCloud errors such as HTTP 421.

@@ -42,19 +42,21 @@ func NewScheduler(cfg Config) (*Scheduler, error) {
 		now = time.Now
 	}
 	store := NewStore(cfg.StorePath)
-	loaded, err := store.Load()
+	state, err := store.LoadState()
 	if err != nil {
 		return nil, err
 	}
+	limiter := NewLimiter(hourlyLimit)
+	limiter.Restore(state.Quota, now())
 	s := &Scheduler{
 		store:   store,
-		limiter: NewLimiter(hourlyLimit),
+		limiter: limiter,
 		creator: cfg.Creator,
-		jobs:    make(map[string]*Job, len(loaded)),
+		jobs:    make(map[string]*Job, len(state.Jobs)),
 		now:     now,
 		rand:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
-	for _, job := range loaded {
+	for _, job := range state.Jobs {
 		cp := cloneJob(job)
 		s.normalizeLoadedJob(cp)
 		s.jobs[cp.ID] = cp
@@ -71,9 +73,15 @@ func (s *Scheduler) CreateOne(ctx context.Context, accountID, label string) (*Cr
 	if !s.limiter.TryReserve(accountID, at, 1) {
 		return nil, ErrHourlyQuotaExceeded
 	}
+	if err := s.persistState(); err != nil {
+		s.limiter.Release(accountID, at, 1)
+		_ = s.persistState()
+		return nil, err
+	}
 	result, err := s.creator.CreateAlias(ctx, accountID, strings.TrimSpace(label))
 	if err != nil {
 		s.limiter.Release(accountID, at, 1)
+		_ = s.persistState()
 		return nil, err
 	}
 	return result, nil
@@ -114,9 +122,18 @@ func (s *Scheduler) BatchCreate(ctx context.Context, req BatchRequest) (*BatchRe
 			resp.Message = "当前小时创建额度不足"
 			return resp, nil
 		}
+		if err := s.persistState(); err != nil {
+			s.limiter.Release(req.AccountID, at, 1)
+			_ = s.persistState()
+			resp.LastError = err.Error()
+			resp.SkippedCount = req.Count - resp.CreatedCount
+			resp.RemainingThisHour = s.limiter.Remaining(req.AccountID, at)
+			return resp, err
+		}
 		result, err := s.creator.CreateAlias(ctx, req.AccountID, labelFor(req.LabelPrefix, resp.CreatedCount+1))
 		if err != nil {
 			s.limiter.Release(req.AccountID, at, 1)
+			_ = s.persistState()
 			resp.LastError = err.Error()
 			resp.SkippedCount = req.Count - resp.CreatedCount
 			resp.RemainingThisHour = s.limiter.Remaining(req.AccountID, at)
@@ -318,6 +335,15 @@ func (s *Scheduler) runJob(ctx context.Context, id string, at time.Time) {
 		})
 		return
 	}
+	if err := s.persistState(); err != nil {
+		s.limiter.Release(accountID, at, 1)
+		s.updateJob(id, at, func(job *Job) {
+			job.Status = StatusError
+			job.LastError = "保存额度状态失败: " + err.Error()
+			job.NextRunAt = nil
+		})
+		return
+	}
 	result, err := s.creator.CreateAlias(ctx, accountID, labelFor(labelPrefix, nextIndex))
 	if err != nil {
 		s.limiter.Release(accountID, at, 1)
@@ -371,6 +397,12 @@ func (s *Scheduler) updateJob(id string, at time.Time, update func(*Job)) {
 	_ = s.saveLocked()
 }
 
+func (s *Scheduler) persistState() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.saveLocked()
+}
+
 func (s *Scheduler) setStatus(id, status string) (*Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -394,7 +426,10 @@ func (s *Scheduler) saveLocked() error {
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].CreatedAt.Before(jobs[j].CreatedAt)
 	})
-	return s.store.Save(jobs)
+	return s.store.SaveState(StoreState{
+		Jobs:  jobs,
+		Quota: s.limiter.Snapshot(s.now()),
+	})
 }
 
 func (s *Scheduler) normalizeLoadedJob(job *Job) {

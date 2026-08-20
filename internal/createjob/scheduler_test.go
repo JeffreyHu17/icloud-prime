@@ -93,6 +93,43 @@ func TestBatchCreateUsesRemainingQuota(t *testing.T) {
 	}
 }
 
+func TestHourlyQuotaPersistsAcrossSchedulerRestart(t *testing.T) {
+	now := time.Date(2026, 8, 9, 10, 30, 0, 0, time.Local)
+	storePath := filepath.Join(t.TempDir(), "create_jobs.json")
+	first, err := NewScheduler(Config{
+		StorePath: storePath,
+		Creator:   &fakeCreator{},
+		Now:       func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("new scheduler failed: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := first.CreateOne(context.Background(), "acc_1", "手动"); err != nil {
+			t.Fatalf("create one %d failed: %v", i+1, err)
+		}
+	}
+
+	restarted, err := NewScheduler(Config{
+		StorePath: storePath,
+		Creator:   &fakeCreator{},
+		Now:       func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("restart scheduler failed: %v", err)
+	}
+	if got := restarted.RemainingThisHour("acc_1"); got != 2 {
+		t.Fatalf("expected persisted quota to leave 2 remaining, got %d", got)
+	}
+	resp, err := restarted.BatchCreate(context.Background(), BatchRequest{AccountID: "acc_1", Count: 5, LabelPrefix: "重启后"})
+	if err != nil {
+		t.Fatalf("batch after restart failed: %v", err)
+	}
+	if resp.CreatedCount != 2 || resp.SkippedCount != 3 || resp.RemainingThisHour != 0 {
+		t.Fatalf("expected persisted quota to allow only 2 more creates, got %+v", resp)
+	}
+}
+
 func TestDurationJobCompletesAfterEndTime(t *testing.T) {
 	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
 	creator := &fakeCreator{}
