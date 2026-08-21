@@ -98,7 +98,7 @@ Open the Releases page:
 Download:
 
 ```text
-icloud-prime-windows10-portable-v0.1.6.zip
+icloud-prime-windows10-portable-v0.1.7.zip
 ```
 
 ### 2. Extract
@@ -112,7 +112,7 @@ D:\Tools\icloud-prime
 The extracted folder contains:
 
 ```text
-icloud-prime-windows10-portable-v0.1.6/
+icloud-prime-windows10-portable-v0.1.7/
 |-- icloud-prime.exe
 |-- start.bat
 |-- stop.bat
@@ -161,6 +161,11 @@ Do not upload or share that file.
 ### 5. Configure Cookie Values
 
 Cookie authentication is used for Hide My Email alias management and as a Web API mail fallback.
+The app saves refreshed `Set-Cookie` values after successful iCloud requests, but
+Apple can still revoke web sessions. If a VPS IP, proxy, browser session, or
+account security state changes, refresh the Cookie values or log in again from
+the account screen. Keeping each account on a stable host/proxy can reduce
+session invalidation.
 
 Common browser workflow:
 
@@ -258,6 +263,9 @@ data/create_jobs.json
 
 The same file also stores current-hour quota usage, so restarting the program
 does not reset an account's already consumed quota for that hour.
+Automatic jobs pace successful creates evenly across the remaining per-account
+hourly quota, so one account reaching quota does not block other accounts from
+continuing their own scheduled jobs.
 
 Do not upload or share that file.
 

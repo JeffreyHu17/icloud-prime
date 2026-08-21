@@ -217,6 +217,56 @@ func TestJobBacksOffAfterHTTP421WithoutStopping(t *testing.T) {
 	}
 }
 
+func TestAutomaticJobPacesNextRunAcrossRemainingHourlyQuota(t *testing.T) {
+	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
+	s := newTestScheduler(t, &fakeCreator{}, now)
+
+	job, err := s.UpsertJob(JobRequest{AccountID: "acc_1", Mode: ModeDuration, DurationHours: 1})
+	if err != nil {
+		t.Fatalf("upsert failed: %v", err)
+	}
+	if err := s.RunDue(context.Background()); err != nil {
+		t.Fatalf("run due failed: %v", err)
+	}
+	updated, ok := s.GetJob(job.ID)
+	if !ok {
+		t.Fatal("job missing")
+	}
+	expected := now.Add(12 * time.Minute)
+	if updated.NextRunAt == nil || !updated.NextRunAt.Equal(expected) {
+		t.Fatalf("expected next run at %v, got %v", expected, updated.NextRunAt)
+	}
+}
+
+func TestAutomaticJobsUseSeparateHourlyQuotaPerAccount(t *testing.T) {
+	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
+	s := newTestScheduler(t, &fakeCreator{}, now)
+
+	if _, err := s.BatchCreate(context.Background(), BatchRequest{AccountID: "acc_1", Count: 5, LabelPrefix: "满额"}); err != nil {
+		t.Fatalf("exhaust first account quota failed: %v", err)
+	}
+	job, err := s.UpsertJob(JobRequest{AccountID: "acc_2", Mode: ModeDuration, DurationHours: 1})
+	if err != nil {
+		t.Fatalf("upsert second account job failed: %v", err)
+	}
+	if err := s.RunDue(context.Background()); err != nil {
+		t.Fatalf("run due failed: %v", err)
+	}
+	updated, ok := s.GetJob(job.ID)
+	if !ok {
+		t.Fatal("job missing")
+	}
+	if updated.CreatedCount != 1 || updated.Status != StatusRunning {
+		t.Fatalf("expected second account job to keep running after creating one alias, got %+v", updated)
+	}
+	if got := s.RemainingThisHour("acc_1"); got != 0 {
+		t.Fatalf("expected first account quota exhausted, got %d remaining", got)
+	}
+	if got := s.RemainingThisHour("acc_2"); got != 4 {
+		t.Fatalf("expected second account to keep independent quota, got %d remaining", got)
+	}
+}
+
 func TestSchedulerStartRunsDueJobs(t *testing.T) {
 	now := time.Date(2026, 8, 9, 10, 0, 0, 0, time.Local)
 	creator := &fakeCreator{}

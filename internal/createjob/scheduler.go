@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sort"
 	"strings"
 	"sync"
@@ -30,7 +29,6 @@ type Scheduler struct {
 	creator AliasCreator
 	jobs    map[string]*Job
 	now     func() time.Time
-	rand    *rand.Rand
 }
 
 func NewScheduler(cfg Config) (*Scheduler, error) {
@@ -54,7 +52,6 @@ func NewScheduler(cfg Config) (*Scheduler, error) {
 		creator: cfg.Creator,
 		jobs:    make(map[string]*Job, len(state.Jobs)),
 		now:     now,
-		rand:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	for _, job := range state.Jobs {
 		cp := cloneJob(job)
@@ -446,15 +443,24 @@ func (s *Scheduler) normalizeLoadedJob(job *Job) {
 }
 
 func (s *Scheduler) nextAutomaticRun(at time.Time, accountID string) time.Time {
-	if s.limiter.Remaining(accountID, at) <= 0 {
+	remainingQuota := s.limiter.Remaining(accountID, at)
+	if remainingQuota <= 0 {
 		return nextHour(at)
 	}
 	hourEnd := nextHour(at)
-	remaining := hourEnd.Sub(at)
-	if remaining <= time.Minute {
+	remainingTime := hourEnd.Sub(at)
+	if remainingTime <= time.Minute {
 		return hourEnd
 	}
-	return at.Add(time.Duration(s.rand.Int63n(int64(remaining))))
+	spacing := remainingTime / time.Duration(remainingQuota+1)
+	if spacing < time.Minute {
+		spacing = time.Minute
+	}
+	next := at.Add(spacing)
+	if !next.Before(hourEnd) {
+		return hourEnd
+	}
+	return next
 }
 
 func (s *Scheduler) isInDailyWindow(at time.Time, start, end string) bool {

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.1.7 - 2026-08-21
+
+- Pace automatic alias creation evenly across each account's remaining hourly quota instead of choosing a random next run time.
+- Added regression coverage for automatic job pacing and independent per-account quota behavior.
+- Documented Cookie session maintenance expectations for VPS and proxy deployments.
+
 ## v0.1.6 - 2026-08-20
 
 - Persist current-hour per-account quota usage in `data/create_jobs.json`.
