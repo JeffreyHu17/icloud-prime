@@ -98,7 +98,7 @@ Open the Releases page:
 Download:
 
 ```text
-icloud-prime-windows10-portable-v0.1.7.zip
+icloud-prime-windows10-portable-v0.1.8.zip
 ```
 
 ### 2. Extract
@@ -112,7 +112,7 @@ D:\Tools\icloud-prime
 The extracted folder contains:
 
 ```text
-icloud-prime-windows10-portable-v0.1.7/
+icloud-prime-windows10-portable-v0.1.8/
 |-- icloud-prime.exe
 |-- start.bat
 |-- stop.bat
@@ -155,6 +155,10 @@ Runtime account data is stored in:
 ```text
 data/accounts.json
 ```
+
+If `data/accounts.json` does not exist and `data/accounts.example.json` contains
+real non-placeholder account values, the app imports those values once and saves
+them to `data/accounts.json`. The placeholder example account is ignored.
 
 Do not upload or share that file.
 

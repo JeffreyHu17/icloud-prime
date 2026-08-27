@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.1.8 - 2026-08-27
+
+- Import edited `data/accounts.example.json` on first startup when `data/accounts.json` does not exist.
+- Ignore placeholder-only example accounts so portable releases do not show fake accounts in the web console.
+- Added account-manager regression coverage for the edited-example import path.
+- Updated README, API docs, and Windows portable usage notes for manual account configuration.
+
 ## v0.1.7 - 2026-08-21
 
 - Pace automatic alias creation evenly across each account's remaining hourly quota instead of choosing a random next run time.

@@ -72,7 +72,7 @@ func (m *Manager) load() error {
 	raw, err := os.ReadFile(m.dataFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return m.importEditedExample()
 		}
 		return err
 	}
@@ -85,6 +85,31 @@ func (m *Manager) load() error {
 		m.accounts = make(map[string]*Account)
 	}
 	return nil
+}
+
+func (m *Manager) importEditedExample() error {
+	raw, err := os.ReadFile(filepath.Join(m.dataDir, "accounts.example.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	accounts, err := parseAccountsFile(raw)
+	if err != nil {
+		return err
+	}
+	configured := make(map[string]*Account)
+	for _, acc := range accounts {
+		if isEditedExampleAccount(acc) {
+			configured[acc.ID] = acc
+		}
+	}
+	if len(configured) == 0 {
+		return nil
+	}
+	m.accounts = configured
+	return m.save()
 }
 
 type accountDisk struct {
@@ -244,6 +269,39 @@ func firstJSONByte(raw []byte) byte {
 		return 0
 	}
 	return raw[0]
+}
+
+func isEditedExampleAccount(acc *Account) bool {
+	if acc == nil {
+		return false
+	}
+	for _, value := range acc.Cookies {
+		if isUserConfiguredValue(value) {
+			return true
+		}
+	}
+	return isUserConfiguredValue(acc.RealEmail) ||
+		isUserConfiguredValue(acc.ICloudEmail) ||
+		isUserConfiguredValue(acc.AppPassword)
+}
+
+func isUserConfiguredValue(value string) bool {
+	normalized := strings.ToLower(strings.Trim(strings.TrimSpace(value), `"'`))
+	if normalized == "" {
+		return false
+	}
+	placeholders := []string{
+		"paste_your_cookie_value_here",
+		"your_email@icloud.com",
+		"xxxx-xxxx-xxxx-xxxx",
+		"value",
+	}
+	for _, placeholder := range placeholders {
+		if normalized == placeholder {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Manager) save() error {

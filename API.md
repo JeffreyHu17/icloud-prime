@@ -36,6 +36,11 @@ GET /api/accounts
 
 Sensitive fields are redacted from the response.
 
+On startup, if `data/accounts.json` is missing, the app can import an edited
+`data/accounts.example.json` that contains real non-placeholder account values.
+The imported accounts are saved to `data/accounts.json`; placeholder example
+values are ignored.
+
 ### Add Account
 
 ```http

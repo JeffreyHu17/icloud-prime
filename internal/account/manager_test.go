@@ -43,6 +43,61 @@ func TestNewManagerLoadsDocumentedAccountsArray(t *testing.T) {
 	}
 }
 
+func TestNewManagerImportsEditedExampleWhenRuntimeFileMissing(t *testing.T) {
+	dir := t.TempDir()
+	raw := `{
+  "accounts": {
+    "acc_1": {
+      "id": "acc_1",
+      "name": "main",
+      "host": "icloud.com",
+      "cookies": {
+        "X-APPLE-WEBAUTH-TOKEN": "real-token-value",
+        "X-APPLE-WEBAUTH-USER": "real-user-value"
+      },
+      "icloud_email": "user@icloud.com",
+      "app_password": "real-app-password"
+    },
+    "acc_placeholder": {
+      "id": "acc_placeholder",
+      "name": "Example account",
+      "host": "icloud.com",
+      "cookies": {
+        "X-APPLE-WEBAUTH-TOKEN": "PASTE_YOUR_COOKIE_VALUE_HERE",
+        "X-APPLE-WEBAUTH-USER": "PASTE_YOUR_COOKIE_VALUE_HERE",
+        "X-APPLE-DS-WEB-SESSION-TOKEN": "PASTE_YOUR_COOKIE_VALUE_HERE"
+      },
+      "icloud_email": "your_email@icloud.com",
+      "app_password": "xxxx-xxxx-xxxx-xxxx",
+      "status": "pending"
+    }
+  }
+}`
+
+	if err := os.WriteFile(filepath.Join(dir, "accounts.example.json"), []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	mgr, err := NewManager(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	acc, ok := mgr.GetAccount("acc_1")
+	if !ok {
+		t.Fatal("expected edited accounts.example.json to be imported")
+	}
+	if got := acc.Cookies["X-APPLE-WEBAUTH-TOKEN"]; got != "real-token-value" {
+		t.Fatalf("expected imported cookie, got %q", got)
+	}
+	if _, ok := mgr.GetAccount("acc_placeholder"); ok {
+		t.Fatal("expected placeholder example account to be ignored")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "accounts.json")); err != nil {
+		t.Fatalf("expected imported accounts to be saved to accounts.json: %v", err)
+	}
+}
+
 func TestNewManagerLoadsBrowserCookieExportAndLegacyAppPasswords(t *testing.T) {
 	dir := t.TempDir()
 	raw := `{

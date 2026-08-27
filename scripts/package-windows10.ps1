@@ -87,7 +87,10 @@ Security notes:
 6. logs\ only stores local runtime logs.
 
 Example config:
-data\accounts.example.json only shows the field format. Replace placeholders with your own values.
+data\accounts.example.json only shows the field format. The recommended path is
+adding accounts in the web console. If you manually replace placeholders in
+accounts.example.json and data\accounts.json does not exist yet, the app imports
+the edited example once and saves it as data\accounts.json.
 "@
 
 Set-Content -LiteralPath (Join-Path $stageDir "data\accounts.example.json") -Encoding ASCII -Value @"
@@ -135,6 +138,7 @@ $releaseNotes = @(
   "- The release package contains no real account data.",
   "- The package only includes accounts.example.json with placeholders.",
   "- Real account data is saved locally to data\accounts.json after you run the app.",
+  "- If accounts.json is missing, an edited accounts.example.json with real values is imported once.",
   "- Automatic job data is saved locally to data\create_jobs.json after you create jobs.",
   "- Do not share data\accounts.json, data\create_jobs.json, Cookie values, or App-specific passwords."
 )
